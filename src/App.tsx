@@ -53,6 +53,8 @@ export default function App() {
   const [currentPartIndex, setCurrentPartIndex] = useState<number>(0);
   const partRefs = useRef<Record<number, HTMLDivElement | null>>({})
 
+  const [loading, setLoading] = useState<number>(0);
+
   // Load phases
   useEffect(() => {
     const loadPhases = async () => {
@@ -147,17 +149,17 @@ export default function App() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Space") {
-        event.preventDefault()
-        next()
+      if (event.key === " ") {
+        event.preventDefault();
+        next();
       }
 
-      if (event.key === "ArrowDown") {
+      if (event.key === "ArrowDown" || event.key === "ArrowRight") {
         event.preventDefault()
         if (currentPartIndex < missionFlow.length - 1) {
           setCurrentPartIndex(currentPartIndex + 1);
         }
-      } else if (event.key === "ArrowUp") {
+      } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
         event.preventDefault()
         if (currentPartIndex > 0) {
           setCurrentPartIndex(currentPartIndex - 1);
@@ -197,8 +199,6 @@ export default function App() {
           setCurrentPartIndex(currentPartIndex + 1)
         }
       }
-
-      console.log(currentPartIndex);
     }
 
     window.addEventListener("keydown", handleKeyDown)
@@ -206,7 +206,7 @@ export default function App() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown)
     }
-  }, [currentPartIndex, missionFlow]);
+  }, [currentPartIndex, missionFlow, currentIndex, phases, runStartTime, runFinished, runId]);
 
   useEffect(() => {
     const item = missionFlow[currentPartIndex]
@@ -227,6 +227,11 @@ export default function App() {
 
   // Start run
   const startRun = async () => {
+    if (phases[0]?.timed) {
+      setStartTime(Date.now());
+      setRunStartTime(Date.now());
+    }
+
     const { data, error } = await supabase
       .from("runs")
       .insert({ created_at: new Date() })
@@ -240,30 +245,38 @@ export default function App() {
 
     setRunId(data.id);
 
-    setCurrentIndex(0);
-
-    if (phases[0]?.timed) {
-      setStartTime(Date.now());
-      setRunStartTime(Date.now());
-    }
-
     return data.id;
   };
 
   const next = async () => {
     if (currentIndex >= phases.length - 1) return;
-
+    console.log(currentIndex);
     let id = runId;
+
+    const nextIndex = currentIndex + 1;
+    const currentPhase = phases[currentIndex];
+
+    // Move to next phase
+    setCurrentIndex(nextIndex);
+
+    setLoading((prev) => prev + 1);
+
+    const currentPhaseStartTime = startTime;
+    setStartTime(Date.now());
+    setElapsed(0);
+
+    if (phases[nextIndex]?.timed && runStartTime === null) {
+      setRunStartTime(Date.now());
+    }
+    if ((!phases[nextIndex]?.timed || phases[nextIndex] === null) && runStartTime !== null && !runFinished) {
+      setRunFinished(true);
+    }
 
     if (!id) {
       id = await startRun();
     }
 
-    const currentPhase = phases[currentIndex];
     if (!currentPhase) return;
-
-    const currentPhaseStartTime = startTime;
-    setStartTime(Date.now());
 
     // If this phase is timed, save its duration
     if (currentPhase.timed && startTime !== null) {
@@ -276,82 +289,70 @@ export default function App() {
       });
     }
 
-    // Move to next phase
-    const nextIndex = currentIndex + 1;
-    setCurrentIndex(nextIndex);
-    setElapsed(0);
-
-    if (phases[nextIndex]?.timed && runStartTime === null) {
-      setRunStartTime(Date.now());
-    }
-    if ((!phases[nextIndex]?.timed || phases[nextIndex] === null) && runStartTime !== null && !runFinished) {
-      setRunFinished(true);
-    }
+    setLoading((prev) => prev - 1);
   };
 
   const handleOptionChange = async (
     mission_part_id: number,
     option_id: number | null
   ) => {
+    setSelectedOptions((prev) => ({
+      ...prev,
+      [mission_part_id]: option_id,
+    }));
+
+    setLoading((prev) => prev + 1);
+
     let id = runId;
 
     if (!id) {
       id = await startRun();
     }
 
-    try {
-      // Get all options belonging to this mission_part
-      const { data, error } = await supabase
-        .from("mission_options")
-        .select(`
+    // Get all options belonging to this mission_part
+    const { data, error } = await supabase
+      .from("mission_options")
+      .select(`
         id,
         mission_part
       `)
-        .eq("mission_part", mission_part_id);
+      .eq("mission_part", mission_part_id);
 
-      if (error) {
-        console.error(error);
-        return;
-      }
-
-      const optionIds = data?.map((item) => item.id) || [];
-
-      // Delete previous selections
-      const { error: deleteError } = await supabase
-        .from("run_missions")
-        .delete()
-        .in("mission_option", optionIds)
-        .eq("run_id", id);
-
-      if (deleteError) {
-        console.error(deleteError);
-        return;
-      }
-
-      // Insert new selection if not "Nothing"
-      if (option_id !== null) {
-        const { error: insertError } = await supabase
-          .from("run_missions")
-          .insert({
-            run_id: id,
-            mission_option: option_id,
-          });
-
-        if (insertError) {
-          console.error(insertError);
-          return;
-        }
-      }
-
-      // Only update state if DB operations succeeded
-      setSelectedOptions((prev) => ({
-        ...prev,
-        [mission_part_id]: option_id,
-      }));
-
-    } catch (err) {
-      console.error(err);
+    if (error) {
+      console.error(error);
+      return;
     }
+
+    const optionIds = data?.map((item) => item.id) || [];
+
+    // Delete previous selections
+    const { error: deleteError } = await supabase
+      .from("run_missions")
+      .delete()
+      .in("mission_option", optionIds)
+      .eq("run_id", id);
+
+    if (deleteError) {
+      console.error(deleteError);
+      return;
+    }
+
+    // Insert new selection if not "Nothing"
+    if (option_id !== null) {
+      const { error: insertError } = await supabase
+        .from("run_missions")
+        .insert({
+          run_id: id,
+          mission_option: option_id,
+        });
+
+      if (insertError) {
+        console.error(insertError);
+        return;
+      }
+    }
+
+    setLoading((prev) => prev - 1);
   };
 
   const totalPoints = missionFlow.reduce((sum, item) => {
@@ -422,7 +423,14 @@ export default function App() {
       {/* Header */}
       <header className="w-full flex px-6 py-4 bg-gray-800 shadow-md sticky top-0 z-10">
         <div className="text-3xl font-bold w-full">{formatTime(totalTime)}</div>
-        <div className="text-3xl font-bold w-full text-center"><a href="https://hobbyrobot.team" target="_blank" className="underline hover:text-gray-300">HobbyRobot</a> FLL scorer</div>
+        <div className="text-3xl font-bold w-full justify-center flex items-center">
+          <a href="https://hobbyrobot.team" target="_blank" className="underline hover:text-gray-300">HobbyRobot</a>
+          &nbsp;FLL scorer&nbsp;
+          <div className={`w-6 h-6 border-4 border-t-transparent rounded-full animate-spin ${loading > 0 ? "border-gray-500" : "border-gray-800"}`}></div>
+        </div>
+        <div className="flex items-center justify-center h-full">
+          
+        </div>
         <div className="text-3xl font-bold w-full text-right">{totalPoints} pts</div>
       </header>
 
@@ -513,9 +521,9 @@ export default function App() {
                       {/* Segmented options */}
                       <div
                         ref={(el) => { partRefs.current[part.id] = el }}
-                        className={`flex w-full outline outline-gray-600 rounded overflow-hidden ${part === missionFlow[currentPartIndex].mission_part
-                          ? "outline-4"
-                          : "outline-1"
+                        className={`flex w-full outline rounded overflow-hidden ${part === missionFlow[currentPartIndex].mission_part
+                          ? "outline-4 outline-gray-500"
+                          : "outline-1 outline-gray-600"
                           }`}
                       >
 
