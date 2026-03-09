@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
 
 type Phase = {
@@ -50,8 +50,8 @@ export default function App() {
     [missionPartId: number]: number | null;
   }>({});
 
-  const [currentPart, setCurrentPart] = useState<MissionPart | null>(null);
   const [currentPartIndex, setCurrentPartIndex] = useState<number>(0);
+  const partRefs = useRef<Record<number, HTMLDivElement | null>>({})
 
   // Load phases
   useEffect(() => {
@@ -109,8 +109,6 @@ export default function App() {
       }
 
       setMissionFlow(data || []);
-      
-      setCurrentPart(data[0].mission_part)
     };
 
     loadMissionFlow();
@@ -149,7 +147,7 @@ export default function App() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.code === "Space") {
+      if (event.key === "Space") {
         event.preventDefault()
         next()
       }
@@ -157,26 +155,75 @@ export default function App() {
       if (event.key === "ArrowDown") {
         event.preventDefault()
         if (currentPartIndex < missionFlow.length - 1) {
-          setCurrentPart(missionFlow[currentPartIndex + 1].mission_part);
           setCurrentPartIndex(currentPartIndex + 1);
         }
       } else if (event.key === "ArrowUp") {
         event.preventDefault()
         if (currentPartIndex > 0) {
-          setCurrentPart(missionFlow[currentPartIndex - 1].mission_part);
           setCurrentPartIndex(currentPartIndex - 1);
+        }
+      } else if (event.key === "Enter") {
+        event.preventDefault()
+        handleOptionChange(missionFlow[currentPartIndex].mission_part.id, missionFlow[currentPartIndex].mission_part.mission_options[missionFlow[currentPartIndex].mission_part.mission_options.length - 1].id);
+
+        // Auto advance to next mission part
+        if (currentPartIndex < missionFlow.length - 1) {
+          setCurrentPartIndex(currentPartIndex + 1)
+        }
+      } else if (event.code.startsWith("Digit")) {
+        event.preventDefault()
+        const num = Number(event.code.replace("Digit", ""))
+        if (num === 0) {
+          handleOptionChange(missionFlow[currentPartIndex].mission_part.id, null)
+        } else if (num <= missionFlow[currentPartIndex].mission_part.mission_options.length) {
+          handleOptionChange(missionFlow[currentPartIndex].mission_part.id, missionFlow[currentPartIndex].mission_part.mission_options[num - 1].id)
+        }
+
+        // Auto advance to next mission part
+        if (currentPartIndex < missionFlow.length - 1) {
+          setCurrentPartIndex(currentPartIndex + 1)
+        }
+      } else if (/^[0-9]$/.test(event.key)) {
+        event.preventDefault()
+        const num = parseInt(event.key, 10)
+        if (num === 0) {
+          handleOptionChange(missionFlow[currentPartIndex].mission_part.id, null)
+        } else if (num <= missionFlow[currentPartIndex].mission_part.mission_options.length) {
+          handleOptionChange(missionFlow[currentPartIndex].mission_part.id, missionFlow[currentPartIndex].mission_part.mission_options[num - 1].id)
+        }
+
+        // Auto advance to next mission part
+        if (currentPartIndex < missionFlow.length - 1) {
+          setCurrentPartIndex(currentPartIndex + 1)
         }
       }
 
-      console.log(missionFlow);
+      console.log(currentPartIndex);
     }
-    
+
     window.addEventListener("keydown", handleKeyDown)
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown)
     }
-  }, [currentIndex, phases.length]);
+  }, [currentPartIndex, missionFlow]);
+
+  useEffect(() => {
+    const item = missionFlow[currentPartIndex]
+    if (!item) return
+
+    const partId = item.mission_part?.id
+    if (!partId) return
+
+    const el = partRefs.current[partId]
+
+    if (el) {
+      el.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      })
+    }
+  }, [currentPartIndex, missionFlow])
 
   // Start run
   const startRun = async () => {
@@ -341,7 +388,7 @@ export default function App() {
   }
 
   const currentPhase = phases[currentIndex];
-  
+
   const groupedFlow = missionFlow.reduce((acc: any[], item) => {
     let phaseGroup = acc.find(p => p.phase.id === item.phase.id)
 
@@ -464,9 +511,13 @@ export default function App() {
                       )}
 
                       {/* Segmented options */}
-                      <div className={`flex w-full outline outline-gray-600 rounded overflow-hidden ${
-                        part === currentPart ? "outline-4" : "outline-1"
-                        }`}>
+                      <div
+                        ref={(el) => { partRefs.current[part.id] = el }}
+                        className={`flex w-full outline outline-gray-600 rounded overflow-hidden ${part === missionFlow[currentPartIndex].mission_part
+                          ? "outline-4"
+                          : "outline-1"
+                          }`}
+                      >
 
                         <button
                           className={`flex-none px-2 py-2 text-sm border-r border-gray-600 flex items-center justify-center ${selectedOptions[part.id] === null
@@ -501,6 +552,6 @@ export default function App() {
           ))}
         </div>
       </div>
-    </div>
+    </div >
   );
 }
