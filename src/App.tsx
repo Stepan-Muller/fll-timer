@@ -9,7 +9,7 @@ export default function App() {
           <Route path="/timer" element={<Timer />} />
           <Route path="/runslist" element={<RunsList />} />
 
-          <Route path="/" element={<Navigate to="/timer" />} />
+          <Route path="/" element={<Navigate to="/runslist" />} />
         </Routes>
     </BrowserRouter>
   )

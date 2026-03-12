@@ -117,6 +117,34 @@ export default function Timer() {
     loadMissionFlow();
   }, []);
 
+  // Start run
+  useEffect(() => {
+    const startRun = async () => {
+      if (runId || !phases.length) return;
+      setRunId(1);
+
+      if (phases[0]?.timed) {
+        setStartTime(Date.now());
+        setRunStartTime(Date.now());
+      }
+
+      const { data, error } = await supabase
+        .from("runs")
+        .insert({ created_at: new Date() })
+        .select()
+        .single();
+
+      if (error || !data) {
+        console.error(error);
+        return;
+      }
+
+      setRunId(data.id);
+    };
+
+    startRun();
+  }, [phases]);
+
   // Timer effect
   useEffect(() => {
     const interval = setInterval(() => {
@@ -226,29 +254,6 @@ export default function Timer() {
     }
   }, [currentPartIndex, missionFlow])
 
-  // Start run
-  const startRun = async () => {
-    if (phases[0]?.timed) {
-      setStartTime(Date.now());
-      setRunStartTime(Date.now());
-    }
-
-    const { data, error } = await supabase
-      .from("runs")
-      .insert({ created_at: new Date() })
-      .select()
-      .single();
-
-    if (error || !data) {
-      console.error(error);
-      return;
-    }
-
-    setRunId(data.id);
-
-    return data.id;
-  };
-
   const next = async () => {
     if (currentIndex >= phases.length - 1) return;
     console.log(currentIndex);
@@ -271,10 +276,6 @@ export default function Timer() {
     }
     if ((!phases[nextIndex]?.timed || phases[nextIndex] === null) && runStartTime !== null && !runFinished) {
       setRunFinished(true);
-    }
-
-    if (!id) {
-      id = await startRun();
     }
 
     if (!currentPhase) return;
@@ -305,10 +306,6 @@ export default function Timer() {
     setLoading((prev) => prev + 1);
 
     let id = runId;
-
-    if (!id) {
-      id = await startRun();
-    }
 
     // Get all options belonging to this mission_part
     const { data, error } = await supabase
@@ -414,14 +411,13 @@ export default function Timer() {
   return (
     <div className="h-screen w-screen bg-gray-900 text-white font-sans flex flex-col">
       {/* Header */}
-      <header className="w-full flex px-6 py-4 bg-gray-800 shadow-md sticky top-0 z-10">
-        <div className="text-3xl font-bold w-1/6">{formatTime(totalTime)}</div>
-        <div className="text-3xl font-bold w-2/3 justify-center flex items-center">
-          <a href="https://hobbyrobot.team" target="_blank" className="underline hover:text-gray-300">HobbyRobot</a>
-          &nbsp;FLL scorer&nbsp;
+      <header className="w-full flex justify-between px-6 py-4 bg-gray-800 shadow-md sticky top-0 z-10">
+        <div className="text-3xl font-bold w-28">{formatTime(totalTime)}</div>
+        <div className="text-3xl font-bold justify-center flex items-center">
+          <a href="/runslist" className="underline hover:text-gray-300">HobbyRobot FLL scorer</a>&nbsp;
           <div className={`w-6 h-6 border-4 border-t-transparent rounded-full animate-spin ${loading > 0 ? "border-gray-500" : "border-gray-800"}`}></div>
         </div>
-        <div className="text-3xl font-bold w-1/6 text-right">{totalPoints} pts</div>
+        <div className="text-3xl font-bold w-28 text-right">{totalPoints} pts</div>
       </header>
 
       {/* Main content: left and right halves */}

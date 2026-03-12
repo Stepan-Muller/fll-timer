@@ -78,6 +78,21 @@ export default function RunsList() {
         setLoading(false)
     }
 
+    async function deleteRun(runId: number) {
+        const { error } = await supabase
+            .from("runs")
+            .delete()
+            .eq("id", runId);
+
+        if (error) {
+            console.error(error);
+            return;
+        }
+
+        // update UI without reloading
+        setRuns(prev => prev.filter(r => r.id !== runId));
+    }
+
     const avgPoints =
         runs.length > 0
             ? Math.round(runs.reduce((a, r) => a + r.totalPoints, 0) / runs.length)
@@ -117,7 +132,7 @@ export default function RunsList() {
                     <div className="w-full"></div>
                     <div className="w-full text-center">Points</div>
                     <div className="w-full text-center">Time</div>
-                    <div className="w-full text-right">+</div>
+                    <div className="w-full text-right"><a href="/timer" className="hover:text-gray-300">Add</a></div>
                 </div>
 
                 {/* Run Items */}
@@ -129,7 +144,11 @@ export default function RunsList() {
                         <div className="w-full">{new Date(run.timestamp).toLocaleString()}</div>
                         <div className="w-full text-center">{run.totalPoints}</div>
                         <div className="w-full text-center">{formatTime(run.totalTime)}</div>
-                        <div className="w-full text-right">Delete</div>
+                        <div className="w-full text-right">
+                            <button onClick={() => deleteRun(run.id)} className="text-red-500 hover:text-red-300">
+                                Delete
+                            </button>
+                        </div>
                     </div>
                 ))}
 
