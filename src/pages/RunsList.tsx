@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { formatTime } from "../utils/time";
+import { useParams } from "react-router-dom";
 
 type RunSummary = {
     id: number
@@ -10,6 +11,9 @@ type RunSummary = {
 }
 
 export default function RunsList() {
+    const { robotgameId } = useParams();
+    const robotgame = Number(robotgameId);
+
     const [runs, setRuns] = useState<RunSummary[]>([])
     const [loading, setLoading] = useState(true)
 
@@ -24,6 +28,7 @@ export default function RunsList() {
         const { data: runsData, error: runsError } = await supabase
             .from("runs")
             .select("id, created_at")
+            .eq("robotgame", robotgame)
             .order("created_at", { ascending: false })
 
         if (runsError) {
@@ -132,7 +137,7 @@ export default function RunsList() {
                     <div className="w-full"></div>
                     <div className="w-full text-center">Points</div>
                     <div className="w-full text-center">Time</div>
-                    <div className="w-full text-right"><a href="/timer" className="hover:text-gray-300">Add</a></div>
+                    <div className="w-full text-right"><a href={`/timer/${robotgame}`} className="hover:text-gray-300">Add</a></div>
                 </div>
 
                 {/* Run Items */}
@@ -145,7 +150,7 @@ export default function RunsList() {
                         <div className="w-full text-center">{run.totalPoints}</div>
                         <div className="w-full text-center">{formatTime(run.totalTime)}</div>
                         <div className="w-full text-right">
-                            <button onClick={() => deleteRun(run.id)} className="text-red-500 hover:text-red-300">
+                            <button onClick={() => deleteRun(run.id)} className="text-red-500 hover:text-red-400">
                                 Delete
                             </button>
                         </div>

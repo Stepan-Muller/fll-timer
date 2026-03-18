@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { formatTime } from "../utils/time";
+import { useParams } from "react-router";
 
 type Phase = {
   id: number;
@@ -35,6 +36,9 @@ type MissionFlowItem = {
 };
 
 export default function Timer() {
+  const { robotgameId } = useParams();
+  const robotgame = Number(robotgameId);
+  
   const [phases, setPhases] = useState<Phase[]>([]);
   const [missionFlow, setMissionFlow] = useState<MissionFlowItem[]>([]);
   const [runId, setRunId] = useState<number | null>(null);
@@ -55,6 +59,7 @@ export default function Timer() {
   const partRefs = useRef<Record<number, HTMLDivElement | null>>({})
 
   const [loading, setLoading] = useState<number>(0);
+  const [savingParts, setSavingParts] = useState<Record<number, boolean>>({})
 
   // Load phases
   useEffect(() => {
@@ -62,7 +67,7 @@ export default function Timer() {
       const { data, error } = await supabase
         .from("phases")
         .select("id, name, color, timed")
-        .eq("robotgame", 1)
+        .eq("robotgame", robotgame)
         .order("id", { ascending: true });
 
       if (error) {
@@ -83,7 +88,7 @@ export default function Timer() {
         .from("mission_parts_phases")
         .select(`
           order,
-          phase:phases (
+          phase:phases!inner (
             id,
             name,
             color
@@ -103,6 +108,7 @@ export default function Timer() {
             )
           )
         `)
+        .eq("phases.robotgame", robotgame)
         .order("order", { ascending: true })
         .returns<MissionFlowItem[]>();
 
@@ -130,7 +136,7 @@ export default function Timer() {
 
       const { data, error } = await supabase
         .from("runs")
-        .insert({ created_at: new Date() })
+        .insert({ robotgame: robotgame })
         .select()
         .single();
 
@@ -235,7 +241,7 @@ export default function Timer() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown)
     }
-  }, [currentPartIndex, missionFlow, currentIndex, phases, runStartTime, runFinished, runId]);
+  }, [currentPartIndex, missionFlow, currentIndex, phases, runStartTime, runFinished, runId, savingParts]);
 
   useEffect(() => {
     const item = missionFlow[currentPartIndex]
@@ -298,6 +304,10 @@ export default function Timer() {
     mission_part_id: number,
     option_id: number | null
   ) => {
+    if (savingParts[mission_part_id]) return
+
+    setSavingParts(prev => ({ ...prev, [mission_part_id]: true }))
+
     setSelectedOptions((prev) => ({
       ...prev,
       [mission_part_id]: option_id,
@@ -318,6 +328,7 @@ export default function Timer() {
 
     if (error) {
       console.error(error);
+      //setSavingParts(prev => ({ ...prev, [mission_part_id]: false }));
       return;
     }
 
@@ -332,6 +343,7 @@ export default function Timer() {
 
     if (deleteError) {
       console.error(deleteError);
+      //setSavingParts(prev => ({ ...prev, [mission_part_id]: false }))
       return;
     }
 
@@ -346,11 +358,14 @@ export default function Timer() {
 
       if (insertError) {
         console.error(insertError);
+        //setSavingParts(prev => ({ ...prev, [mission_part_id]: false }))
         return;
       }
     }
 
     setLoading((prev) => prev - 1);
+
+    setSavingParts(prev => ({ ...prev, [mission_part_id]: false }))
   };
 
   const totalPoints = missionFlow.reduce((sum, item) => {
@@ -414,7 +429,7 @@ export default function Timer() {
       <header className="w-full flex justify-between px-6 py-4 bg-gray-800 shadow-md sticky top-0 z-10">
         <div className="text-3xl font-bold w-28">{formatTime(totalTime)}</div>
         <div className="text-3xl font-bold justify-center flex items-center">
-          <a href="/runslist" className="underline hover:text-gray-300">HobbyRobot FLL scorer</a>&nbsp;
+          <a href={`/runslist/${robotgame}`} className="underline hover:text-gray-300">HobbyRobot FLL scorer</a>&nbsp;
           <div className={`w-6 h-6 border-4 border-t-transparent rounded-full animate-spin ${loading > 0 ? "border-gray-500" : "border-gray-800"}`}></div>
         </div>
         <div className="text-3xl font-bold w-28 text-right">{totalPoints} pts</div>
@@ -514,7 +529,8 @@ export default function Timer() {
                       >
 
                         <button
-                          className={`flex-none px-2 py-2 text-sm border-r border-gray-600 flex items-center justify-center ${selectedOptions[part.id] === null
+                          className={`flex-none px-2 py-2 text-sm border-r border-gray-600 flex items-center justify-center ${savingParts[part.id] ? "cursor-not-allowed" : ""} ${
+                            selectedOptions[part.id] === null
                             ? "bg-gray-600"
                             : "bg-gray-800 hover:bg-gray-700"
                             }`}
@@ -526,7 +542,8 @@ export default function Timer() {
                         {part.mission_options.map((option: any) => (
                           <button
                             key={option.id}
-                            className={`flex-1 px-2 py-2 text-sm border-l border-gray-600 ${selectedOptions[part.id] === option.id
+                            className={`flex-1 px-2 py-2 text-sm border-l border-gray-600 ${savingParts[part.id] ? "cursor-not-allowed" : ""} ${
+                              selectedOptions[part.id] === option.id
                               ? "bg-gray-600"
                               : "bg-gray-800 hover:bg-gray-700"
                               }`}

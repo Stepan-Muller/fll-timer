@@ -6,10 +6,10 @@ export default function App() {
   return (
     <BrowserRouter>
         <Routes>
-          <Route path="/timer" element={<Timer />} />
-          <Route path="/runslist" element={<RunsList />} />
+          <Route path="/timer/:robotgameId" element={<Timer />} />
+          <Route path="/runslist/:robotgameId" element={<RunsList />} />
 
-          <Route path="/" element={<Navigate to="/runslist" />} />
+          <Route path="/" element={<Navigate to="/runslist/2" />} />
         </Routes>
     </BrowserRouter>
   )
