@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { formatTime } from "../utils/time";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 
 type Phase = {
   id: number;
@@ -60,6 +60,8 @@ export default function Timer() {
 
   const [loading, setLoading] = useState<number>(0);
   const [savingParts, setSavingParts] = useState<Record<number, boolean>>({})
+
+  const navigate = useNavigate();
 
   // Load phases
   useEffect(() => {
@@ -429,7 +431,7 @@ export default function Timer() {
       <header className="w-full flex justify-between px-6 py-4 bg-gray-800 shadow-md sticky top-0 z-10">
         <div className="text-3xl font-bold w-28">{formatTime(totalTime)}</div>
         <div className="text-3xl font-bold justify-center flex items-center">
-          <a href={`/runslist/${robotgame}`} className="underline hover:text-gray-300">HobbyRobot FLL scorer</a>&nbsp;
+          <button onClick={() => navigate(`/runslist/${robotgame}`)} className="underline hover:text-gray-300">HobbyRobot FLL scorer</button>
           <div className={`w-6 h-6 border-4 border-t-transparent rounded-full animate-spin ${loading > 0 ? "border-gray-500" : "border-gray-800"}`}></div>
         </div>
         <div className="text-3xl font-bold w-28 text-right">{totalPoints} pts</div>
