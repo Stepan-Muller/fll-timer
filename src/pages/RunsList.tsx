@@ -10,11 +10,6 @@ type RunSummary = {
     totalTime: number;
 };
 
-type RobotGame = {
-    id: number;
-    name: string;
-};
-
 export default function RunsList() {
     const { robotgameId } = useParams();
     const robotgame = Number(robotgameId);
