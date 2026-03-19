@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useNavigate } from "react-router-dom";
+import { supabaseRetry } from "../utils/supabase";
 
 type Season = {
   year: number;
@@ -27,9 +28,11 @@ export default function RobotGamesList() {
   async function loadData() {
     setLoading(true);
 
-    const { data: gamesData, error: gamesError } = await supabase
-      .from("robotgames")
-      .select("id, name, season");
+    const { data: gamesData, error: gamesError } = await await supabaseRetry(async () =>
+      supabase
+        .from("robotgames")
+        .select("id, name, season")
+    );
 
     if (gamesError) {
       console.error(gamesError);
@@ -37,9 +40,11 @@ export default function RobotGamesList() {
       return;
     }
 
-    const { data: seasonsData, error: seasonsError } = await supabase
-      .from("seasons")
-      .select("year, name");
+    const { data: seasonsData, error: seasonsError } = await supabaseRetry(async () =>
+      supabase
+        .from("seasons")
+        .select("year, name")
+    );
 
     if (seasonsError) {
       console.error(seasonsError);

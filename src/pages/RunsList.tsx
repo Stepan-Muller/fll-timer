@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { formatTime } from "../utils/time";
 import { useNavigate, useParams } from "react-router-dom";
+import { supabaseRetry } from "../utils/supabase";
 
 type RunSummary = {
     id: number;
@@ -28,11 +29,13 @@ export default function RunsList() {
         setLoading(true);
 
         // 1️⃣ Get robotgame name
-        const { data: gameData, error: gameError } = await supabase
-            .from("robotgames")
-            .select("name")
-            .eq("id", robotgame)
-            .single();
+        const { data: gameData, error: gameError } = await await supabaseRetry(async () =>
+            supabase
+                .from("robotgames")
+                .select("name")
+                .eq("id", robotgame)
+                .single()
+        );
 
         if (gameError || !gameData) {
             console.error(gameError);
@@ -43,11 +46,13 @@ export default function RunsList() {
         setRobotGameName(gameData.name);
 
         // 2️⃣ Get runs for this robotgame
-        const { data: runsData, error: runsError } = await supabase
-            .from("runs")
-            .select("id, created_at")
-            .eq("robotgame", robotgame)
-            .order("created_at", { ascending: false });
+        const { data: runsData, error: runsError } = await supabaseRetry(async () =>
+            supabase
+                .from("runs")
+                .select("id, created_at")
+                .eq("robotgame", robotgame)
+                .order("created_at", { ascending: false })
+        );
 
         if (runsError || !runsData) {
             console.error(runsError);
@@ -64,16 +69,20 @@ export default function RunsList() {
         }
 
         // 3️⃣ Get points from run_missions
-        const { data: selectionsData } = await supabase
-            .from("run_missions")
-            .select("run_id, mission_options (points)")
-            .in("run_id", runIds);
+        const { data: selectionsData } = await supabaseRetry(async () =>
+            supabase
+                .from("run_missions")
+                .select("run_id, mission_options (points)")
+                .in("run_id", runIds)
+        );
 
         // 4️⃣ Get run times
-        const { data: timesData } = await supabase
-            .from("run_times")
-            .select("run_id, time")
-            .in("run_id", runIds);
+        const { data: timesData } = await supabaseRetry(async () =>
+            supabase
+                .from("run_times")
+                .select("run_id, time")
+                .in("run_id", runIds)
+        );
 
         // 5️⃣ Calculate totals
         const summaries: RunSummary[] = runsData.map((run) => {
@@ -96,10 +105,12 @@ export default function RunsList() {
     }
 
     async function deleteRun(runId: number) {
-        const { error } = await supabase
-            .from("runs")
-            .delete()
-            .eq("id", runId);
+        const { error } = await supabaseRetry(async () =>
+            supabase
+                .from("runs")
+                .delete()
+                .eq("id", runId)
+        );
 
         if (error) {
             console.error(error);

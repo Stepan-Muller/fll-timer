@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { formatTime } from "../utils/time";
 import { useNavigate, useParams } from "react-router";
+import { supabaseRetry } from "../utils/supabase";
 
 type Phase = {
   id: number;
@@ -38,7 +39,7 @@ type MissionFlowItem = {
 export default function Timer() {
   const { robotgameId } = useParams();
   const robotgame = Number(robotgameId);
-  
+
   const [phases, setPhases] = useState<Phase[]>([]);
   const [missionFlow, setMissionFlow] = useState<MissionFlowItem[]>([]);
   const [runId, setRunId] = useState<number | null>(null);
@@ -66,16 +67,14 @@ export default function Timer() {
   // Load phases
   useEffect(() => {
     const loadPhases = async () => {
-      const { data, error } = await supabase
-        .from("phases")
-        .select("id, name, color, timed")
-        .eq("robotgame", robotgame)
-        .order("id", { ascending: true });
+      const { data } = await supabaseRetry(async () =>
+        supabase
+          .from("phases")
+          .select("id, name, color, timed")
+          .eq("robotgame", robotgame)
+          .order("id", { ascending: true })
+      );
 
-      if (error) {
-        console.error(error);
-        return;
-      }
 
       setPhases(data || []);
     };
@@ -86,12 +85,13 @@ export default function Timer() {
   // Load mission flow
   useEffect(() => {
     const loadMissionFlow = async () => {
-      const { data, error } = await supabase
-        .from("mission_parts_phases")
-        .select(`
-          order,
-          phase:phases!inner (
-            id,
+      const { data } = await supabaseRetry(async () =>
+        supabase
+          .from("mission_parts_phases")
+          .select(`
+            order,
+            phase:phases!inner (
+              id,
             name,
             color
           ),
@@ -110,14 +110,10 @@ export default function Timer() {
             )
           )
         `)
-        .eq("phases.robotgame", robotgame)
-        .order("order", { ascending: true })
-        .returns<MissionFlowItem[]>();
-
-      if (error) {
-        console.error(error);
-        return;
-      }
+          .eq("phases.robotgame", robotgame)
+          .order("order", { ascending: true })
+          .returns<MissionFlowItem[]>()
+      );
 
       setMissionFlow(data || []);
     };
@@ -136,16 +132,13 @@ export default function Timer() {
         setRunStartTime(Date.now());
       }
 
-      const { data, error } = await supabase
-        .from("runs")
-        .insert({ robotgame: robotgame })
-        .select()
-        .single();
-
-      if (error || !data) {
-        console.error(error);
-        return;
-      }
+      const { data } = await supabaseRetry(async () =>
+        supabase
+          .from("runs")
+          .insert({ robotgame: robotgame })
+          .select()
+          .single()
+      );
 
       setRunId(data.id);
     };
@@ -292,11 +285,16 @@ export default function Timer() {
     if (currentPhase.timed && startTime !== null) {
       const duration = Date.now() - currentPhaseStartTime;
 
-      await supabase.from("run_times").insert({
+      const { error: insertError } = await supabaseRetry(async () => supabase.from("run_times").insert({
         run_id: id,
         phase: currentPhase.id,
         time: duration,
-      });
+      }));
+
+      if (insertError) {
+        console.error(insertError);
+        return;
+      }
     }
 
     setLoading((prev) => prev - 1);
@@ -320,49 +318,37 @@ export default function Timer() {
     let id = runId;
 
     // Get all options belonging to this mission_part
-    const { data, error } = await supabase
-      .from("mission_options")
-      .select(`
+    const { data } = await await supabaseRetry(async () =>
+      supabase
+        .from("mission_options")
+        .select(`
         id,
         mission_part
       `)
-      .eq("mission_part", mission_part_id);
-
-    if (error) {
-      console.error(error);
-      //setSavingParts(prev => ({ ...prev, [mission_part_id]: false }));
-      return;
-    }
+        .eq("mission_part", mission_part_id)
+    );
 
     const optionIds = data?.map((item) => item.id) || [];
 
     // Delete previous selections
-    const { error: deleteError } = await supabase
-      .from("run_missions")
-      .delete()
-      .in("mission_option", optionIds)
-      .eq("run_id", id);
-
-    if (deleteError) {
-      console.error(deleteError);
-      //setSavingParts(prev => ({ ...prev, [mission_part_id]: false }))
-      return;
-    }
+    await supabaseRetry(async () =>
+      supabase
+        .from("run_missions")
+        .delete()
+        .in("mission_option", optionIds)
+        .eq("run_id", id)
+    );
 
     // Insert new selection if not "Nothing"
     if (option_id !== null) {
-      const { error: insertError } = await supabase
-        .from("run_missions")
-        .insert({
-          run_id: id,
-          mission_option: option_id,
-        });
-
-      if (insertError) {
-        console.error(insertError);
-        //setSavingParts(prev => ({ ...prev, [mission_part_id]: false }))
-        return;
-      }
+      await supabaseRetry(async () =>
+        supabase
+          .from("run_missions")
+          .insert({
+            run_id: id,
+            mission_option: option_id,
+          })
+      );
     }
 
     setLoading((prev) => prev - 1);
@@ -432,6 +418,7 @@ export default function Timer() {
         <div className="text-3xl font-bold w-28">{formatTime(totalTime)}</div>
         <div className="text-3xl font-bold justify-center flex items-center">
           <button onClick={() => navigate(`/runslist/${robotgame}`)} className="underline hover:text-gray-300">HobbyRobot FLL scorer</button>
+          &nbsp;
           <div className={`w-6 h-6 border-4 border-t-transparent rounded-full animate-spin ${loading > 0 ? "border-gray-500" : "border-gray-800"}`}></div>
         </div>
         <div className="text-3xl font-bold w-28 text-right">{totalPoints} pts</div>
@@ -531,8 +518,7 @@ export default function Timer() {
                       >
 
                         <button
-                          className={`flex-none px-2 py-2 text-sm border-r border-gray-600 flex items-center justify-center ${savingParts[part.id] ? "cursor-not-allowed" : ""} ${
-                            selectedOptions[part.id] === null
+                          className={`flex-none px-2 py-2 text-sm border-r border-gray-600 flex items-center justify-center ${savingParts[part.id] ? "cursor-not-allowed" : ""} ${selectedOptions[part.id] === null
                             ? "bg-gray-600"
                             : "bg-gray-800 hover:bg-gray-700"
                             }`}
@@ -544,8 +530,7 @@ export default function Timer() {
                         {part.mission_options.map((option: any) => (
                           <button
                             key={option.id}
-                            className={`flex-1 px-2 py-2 text-sm border-l border-gray-600 ${savingParts[part.id] ? "cursor-not-allowed" : ""} ${
-                              selectedOptions[part.id] === option.id
+                            className={`flex-1 px-2 py-2 text-sm border-l border-gray-600 ${savingParts[part.id] ? "cursor-not-allowed" : ""} ${selectedOptions[part.id] === option.id
                               ? "bg-gray-600"
                               : "bg-gray-800 hover:bg-gray-700"
                               }`}
