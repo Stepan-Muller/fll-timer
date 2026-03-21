@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { formatTime } from "../utils/time";
+import { formatTime } from "../utils/formating";
 import { useNavigate, useParams } from "react-router";
 import { supabaseRetry } from "../utils/supabase";
 
@@ -8,7 +8,6 @@ type Phase = {
   id: number;
   name: string;
   color: string | null;
-  timed: boolean;
 };
 
 type MissionPart = {
@@ -70,7 +69,7 @@ export default function Timer() {
       const { data } = await supabaseRetry(async () =>
         supabase
           .from("phases")
-          .select("id, name, color, timed")
+          .select("id, name, color")
           .eq("robotgame", robotgame)
           .order("id", { ascending: true })
       );
@@ -126,11 +125,6 @@ export default function Timer() {
     const startRun = async () => {
       if (runId || !phases.length) return;
       setRunId(1);
-
-      if (phases[0]?.timed) {
-        setStartTime(Date.now());
-        setRunStartTime(Date.now());
-      }
 
       const { data } = await supabaseRetry(async () =>
         supabase
@@ -272,17 +266,17 @@ export default function Timer() {
     setStartTime(Date.now());
     setElapsed(0);
 
-    if (phases[nextIndex]?.timed && runStartTime === null) {
+    if (runStartTime === null) {
       setRunStartTime(Date.now());
     }
-    if ((!phases[nextIndex]?.timed || phases[nextIndex] === null) && runStartTime !== null && !runFinished) {
+    if ((!(nextIndex > 0 && nextIndex < phases.length - 1) || phases[nextIndex] === null) && runStartTime !== null && !runFinished) {
       setRunFinished(true);
     }
 
     if (!currentPhase) return;
 
     // If this phase is timed, save its duration
-    if (currentPhase.timed && startTime !== null) {
+    if ((currentIndex > 0 && currentIndex < phases.length - 1) && startTime !== null) {
       const duration = Date.now() - currentPhaseStartTime;
 
       const { error: insertError } = await supabaseRetry(async () => supabase.from("run_times").insert({
@@ -445,7 +439,7 @@ export default function Timer() {
 
               {/* MIDDLE — Timer */}
               <div className="flex-1 flex items-center justify-center">
-                {currentPhase.timed && (
+                {(currentIndex > 0 && currentIndex < phases.length - 1) && (
                   <div className="text-6xl font-mono">
                     {(elapsed / 1000).toFixed(1)}
                   </div>

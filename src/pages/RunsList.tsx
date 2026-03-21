@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { formatTime } from "../utils/time";
+import { formatTime, formatDate } from "../utils/formating";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabaseRetry } from "../utils/supabase";
 
@@ -164,7 +164,7 @@ export default function RunsList() {
                 {/* Run Items */}
                 {runs.map((run) => (
                     <div key={run.id} className="my-4 mx-6 px-4 py-2 rounded-lg bg-gray-800 flex">
-                        <div className="w-full">{new Date(run.timestamp).toLocaleString()}</div>
+                        <div className="w-full">{formatDate(new Date(run.timestamp))}</div>
                         <div className="w-full text-center">{run.totalPoints}</div>
                         <div className="w-full text-center">{formatTime(run.totalTime)}</div>
                         <div className="w-full text-right">

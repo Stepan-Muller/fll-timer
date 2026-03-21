@@ -28,7 +28,7 @@ export default function RobotGamesList() {
   async function loadData() {
     setLoading(true);
 
-    const { data: gamesData, error: gamesError } = await await supabaseRetry(async () =>
+    const { data: gamesData, error: gamesError } = await supabaseRetry(async () =>
       supabase
         .from("robotgames")
         .select("id, name, season")
@@ -57,6 +57,22 @@ export default function RobotGamesList() {
     setLoading(false);
   }
 
+  async function deleteGame(gameId: number) {
+    const { error } = await supabaseRetry(async () =>
+      supabase
+        .from("robotgames")
+        .delete()
+        .eq("id", gameId)
+    );
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    setGames(prev => prev.filter(g => g.id !== gameId));
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-900">
@@ -72,7 +88,7 @@ export default function RobotGamesList() {
       season,
       games: games
         .filter((g) => g.season === season.year)
-        .sort((a, b) => b.id - a.id), // reverse order
+        .sort((a, b) => b.id - a.id),
     }));
 
   return (
@@ -89,28 +105,38 @@ export default function RobotGamesList() {
           <div key={group.season.year}>
             {/* Season Header */}
             <div
-              className="font-bold text-2xl px-4 py-2 mt-6 mb-4 rounded-lg shadow-md"
+              className="font-bold text-2xl px-4 py-2 mt-6 mb-4 rounded-lg shadow-md flex justify-between items-center"
               style={{
                 backgroundColor: "#374151",
                 color: "#ffffff",
               }}
             >
-              {group.season.year} – {group.season.name}
+              <span>{group.season.year}/{(group.season.year % 100) + 1} – {group.season.name}</span>
+              <button
+                onClick={() => navigate("/createrobotgame")}
+                className="underline hover:text-gray-300"
+              >
+                Add
+              </button>
             </div>
 
             {/* Games */}
             {group.games.map((game) => (
               <div
                 key={game.id}
-                className="mb-4 px-4 py-2 rounded-lg bg-gray-800 flex hover:bg-gray-700 cursor-pointer"
-                onClick={() => navigate(`/runslist/${game.id}`)}
+                className="mb-4 px-4 py-2 rounded-lg bg-gray-800 flex justify-between items-center"
               >
-                <div className="w-full text-lg font-semibold">
+                <button className="text-lg font-semibold underline hover:text-gray-300" onClick={() => navigate(`/runslist/${game.id}`)}>
                   {game.name}
-                </div>
+                </button>
+                <button
+                  onClick={() => deleteGame(game.id)}
+                  className="underline text-red-500 hover:text-red-400"
+                >
+                  Delete
+                </button>
               </div>
-            ))
-            }
+            ))}
           </div>
         ))}
       </div>
