@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import { formatTime } from "../utils/formating";
 import { useNavigate, useParams } from "react-router";
 import { supabaseRetry } from "../utils/supabase";
 
-type Phase = {
+type MissionOption = {
   id: number;
-  name: string;
-  color: string | null;
+  description: string;
+  points: number;
 };
 
 type MissionPart = {
@@ -18,15 +18,22 @@ type MissionPart = {
     display_number: number | null;
   };
   description: string | null;
-  mission_options: {
-    id: number;
-    description: string;
-    points: number;
-  }[];
+  mission_options: MissionOption[];
+};
+
+type MissionPartPhase = {
+  order: number;
+  mission_part: MissionPart;
+};
+
+type Phase = {
+  id: number;
+  name: string;
+  color: string | null;
+  mission_parts_phases: MissionPartPhase[];
 };
 
 type MissionFlowItem = {
-  order: number;
   phase: {
     id: number;
     name: string;
@@ -40,7 +47,6 @@ export default function Timer() {
   const robotgame = Number(robotgameId);
 
   const [phases, setPhases] = useState<Phase[]>([]);
-  const [missionFlow, setMissionFlow] = useState<MissionFlowItem[]>([]);
   const [runId, setRunId] = useState<number | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -63,62 +69,68 @@ export default function Timer() {
 
   const navigate = useNavigate();
 
-  // Load phases
+  // ✅ Single load (phases + mission data)
   useEffect(() => {
     const loadPhases = async () => {
       const { data } = await supabaseRetry(async () =>
         supabase
           .from("phases")
-          .select("id, name, color")
+          .select(`
+            id,
+            name,
+            color,
+            mission_parts_phases (
+              order,
+              mission_part:mission_parts (
+                id,
+                description,
+                mission:missions (
+                  id,
+                  name,
+                  display_number
+                ),
+                mission_options (
+                  id,
+                  description,
+                  points
+                )
+              )
+            )
+          `)
           .eq("robotgame", robotgame)
           .order("id", { ascending: true })
       );
 
+      if (!data) {
+        setPhases([]);
+        return;
+      }
 
-      setPhases(data || []);
+      const sorted = data.map((phase: any) => ({
+        ...phase,
+        mission_parts_phases: (phase.mission_parts_phases || []).sort(
+          (a: any, b: any) => a.order - b.order
+        ),
+      }));
+
+      setPhases(sorted);
     };
 
     loadPhases();
   }, []);
-
-  // Load mission flow
-  useEffect(() => {
-    const loadMissionFlow = async () => {
-      const { data } = await supabaseRetry(async () =>
-        supabase
-          .from("mission_parts_phases")
-          .select(`
-            order,
-            phase:phases!inner (
-              id,
-            name,
-            color
-          ),
-          mission_part:mission_parts (
-            id,
-            mission:missions (
-              id,
-              name,
-              display_number
-            ),
-            description,
-            mission_options (
-              id,
-              description,
-              points
-            )
-          )
-        `)
-          .eq("phases.robotgame", robotgame)
-          .order("order", { ascending: true })
-          .returns<MissionFlowItem[]>()
-      );
-
-      setMissionFlow(data || []);
-    };
-
-    loadMissionFlow();
-  }, []);
+  
+  const missionFlow: MissionFlowItem[] = useMemo(() => {
+    return phases.flatMap((phase) =>
+      (phase.mission_parts_phases || []).map((item) => ({
+        phase: {
+          id: phase.id,
+          name: phase.name,
+          color: phase.color,
+        },
+        mission_part: item.mission_part,
+      }))
+    );
+  }, [phases]);
 
   // Start run
   useEffect(() => {
@@ -140,12 +152,11 @@ export default function Timer() {
     startRun();
   }, [phases]);
 
-  // Timer effect
+  // Timer effects (unchanged)
   useEffect(() => {
     const interval = setInterval(() => {
       setElapsed(Date.now() - startTime);
     }, 100);
-
     return () => clearInterval(interval);
   }, [startTime]);
 
@@ -164,12 +175,14 @@ export default function Timer() {
       const initial: { [id: number]: null } = {};
       missionFlow.forEach((item) => {
         if (item.mission_part.mission_options.length > 0) {
-          initial[item.mission_part.id] = null; // Nothing selected by default
+          initial[item.mission_part.id] = null;
         }
       });
       setSelectedOptions(initial);
     }
   }, [missionFlow]);
+
+  // ⛔ everything else stays EXACTLY the same below
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -523,8 +536,8 @@ export default function Timer() {
                               partRefs.current[part.id] = el;
                             }}
                             className={`flex w-full outline rounded overflow-hidden ${part === missionFlow[currentPartIndex].mission_part
-                                ? "outline-4 outline-gray-500"
-                                : "outline-1 outline-gray-600"
+                              ? "outline-4 outline-gray-500"
+                              : "outline-1 outline-gray-600"
                               }`}
                           >
                             <button

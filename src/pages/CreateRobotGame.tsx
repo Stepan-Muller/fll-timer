@@ -47,7 +47,7 @@ type MissionPart = {
   }[];
 };
 
-function SortableItem({
+function Phase({
   phase,
   updatePhaseName,
   deletePhase,
@@ -327,11 +327,11 @@ export default function CreateRobotGame() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* LEFT: Mission Parts list */}
-        <div className="w-[calc(50%-16px)] p-6 pb-2 bg-gray-800 overflow-y-auto">
+        <div className="w-[calc(50%-16px)] px-6 py-2 bg-gray-800 overflow-y-auto">
           {missionParts.map((part) => (
             <div
               key={part.id}
-              className="mb-4 p-4 pt-3 bg-gray-700 rounded-lg shadow overflow-hidden"
+              className="my-4 p-4 pt-3 bg-gray-700 rounded-lg shadow overflow-hidden"
             >
               <div className="font-bold mb-2">
                 {part.mission.display_number &&
@@ -370,7 +370,7 @@ export default function CreateRobotGame() {
               strategy={verticalListSortingStrategy}
             >
               {phases.map((phase) => (
-                <SortableItem
+                <Phase
                   key={phase.id}
                   phase={phase}
                   updatePhaseName={updatePhaseName}
