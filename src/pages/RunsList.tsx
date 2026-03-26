@@ -132,7 +132,7 @@ export default function RunsList() {
     }
 
     return (
-        <div className="bg-gray-900 min-h-screen text-white">
+        <div className="bg-gray-900 min-h-screen text-white pb-14">
             {/* Main Header */}
             <header className="w-full flex px-6 py-4 bg-gray-800 shadow-md sticky top-0 z-20">
                 <div className="text-3xl font-bold w-full flex justify-center">
@@ -177,7 +177,7 @@ export default function RunsList() {
 
                 {/* Footer Box */}
                 <div
-                    className="font-bold text-2xl px-10 py-2 mt-6 shadow-[0_0_6px_rgba(0,0,0,0.2)] sticky bottom-0 z-20 flex"
+                    className="font-bold text-2xl w-full px-10 py-2 shadow-[0_0_6px_rgba(0,0,0,0.2)] fixed bottom-0 z-20 flex"
                     style={{
                         backgroundColor: "#374151",
                         color: "#ffffff",

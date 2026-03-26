@@ -421,7 +421,7 @@ export default function Timer() {
       {/* Main content: left and right halves */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left: Timer */}
-        <div className="w-1/2 p-6 flex flex-col bg-gray-800">
+        <div className="w-[calc(50%-16px)] p-6 flex flex-col bg-gray-800">
           {currentPhase && (
             <>
               {/* TOP — Phase */}
@@ -464,84 +464,104 @@ export default function Timer() {
         </div>
 
         {/* Right: Missions */}
-        <div className="w-1/2 px-6 pb-2 bg-gray-850 overflow-y-auto">
-          {groupedFlow.map((phaseGroup) => (
-            <div key={phaseGroup.phase.id}>
+        <div className="w-[calc(50%+16px)] p-6 pb-2 bg-gray-850 overflow-y-auto">
+          {groupedFlow.map((phaseGroup) => {
+            const baseColor = "#" + (phaseGroup.phase.color || "374151");
 
-              {/* Phase label */}
+            // near-black background with subtle color accent
+            function accentDark(hex: string) {
+              const clean = hex.replace("#", "");
+              const r = Math.floor(parseInt(clean.substring(0, 2), 16) * 0.17);
+              const g = Math.floor(parseInt(clean.substring(2, 4), 16) * 0.17);
+              const b = Math.floor(parseInt(clean.substring(4, 6), 16) * 0.17);
+
+              return `rgb(${r}, ${g}, ${b})`;
+            }
+
+            return (
               <div
-                className="mt-6 mb-4 font-bold px-4 py-2 rounded-lg"
+                key={phaseGroup.phase.id}
+                className="mb-4 rounded-lg outline outline-1 overflow-hidden"
                 style={{
-                  backgroundColor: "#" + (phaseGroup.phase.color || "374151"),
-                  color: getContrastTextColor("#" + (phaseGroup.phase.color || "374151"))
+                  backgroundColor: accentDark(baseColor),
+                  outlineColor: baseColor,
                 }}
               >
-                {phaseGroup.phase.name}
-              </div>
-
-              {/* Missions */}
-              {phaseGroup.missions.map((missionGroup: any) => (
+                {/* Phase header */}
                 <div
-                  key={missionGroup.mission.id}
-                  className="mb-4 pb-2 bg-gray-800 rounded-lg shadow overflow-hidden"
+                  className="px-4 py-2 font-bold"
+                  style={{
+                    backgroundColor: baseColor,
+                    color: getContrastTextColor(baseColor),
+                  }}
                 >
-                  <div className="px-4 py-2 mb-2 bg-gray-700 font-bold">
-                    {missionGroup.mission.display_number &&
-                      `M${missionGroup.mission.display_number} `}
-                    {missionGroup.mission.name}
-                  </div>
+                  {phaseGroup.phase.name}
+                </div>
 
-                  {missionGroup.parts.map((part: any) => (
+                {/* Missions */}
+                <div className="px-4">
+                  {phaseGroup.missions.map((missionGroup: any) => (
                     <div
-                      key={part.id}
-                      className="px-4 py-2"
+                      key={missionGroup.mission.id}
+                      className="my-4 pb-2 bg-gray-800 rounded-lg shadow overflow-hidden"
                     >
-                      {part.description && (
-                        <div className="mb-2">
-                          {part.description}
-                        </div>
-                      )}
-
-                      {/* Segmented options */}
-                      <div
-                        ref={(el) => { partRefs.current[part.id] = el }}
-                        className={`flex w-full outline rounded overflow-hidden ${part === missionFlow[currentPartIndex].mission_part
-                          ? "outline-4 outline-gray-500"
-                          : "outline-1 outline-gray-600"
-                          }`}
-                      >
-
-                        <button
-                          className={`flex-none px-2 py-2 text-sm border-r border-gray-600 flex items-center justify-center ${savingParts[part.id] ? "cursor-not-allowed" : ""} ${selectedOptions[part.id] === null
-                            ? "bg-gray-600"
-                            : "bg-gray-800 hover:bg-gray-700"
-                            }`}
-                          onClick={() => handleOptionChange(part.id, null)}
-                        >
-                          ∅
-                        </button>
-
-                        {part.mission_options.map((option: any) => (
-                          <button
-                            key={option.id}
-                            className={`flex-1 px-2 py-2 text-sm border-l border-gray-600 ${savingParts[part.id] ? "cursor-not-allowed" : ""} ${selectedOptions[part.id] === option.id
-                              ? "bg-gray-600"
-                              : "bg-gray-800 hover:bg-gray-700"
-                              }`}
-                            onClick={() =>
-                              handleOptionChange(part.id, option.id)
-                            }
-                          >
-                            {option.description}
-                          </button>
-                        ))}
+                      <div className="px-4 py-2 mb-2 bg-gray-700 font-bold">
+                        {missionGroup.mission.display_number &&
+                          `M${missionGroup.mission.display_number} `}
+                        {missionGroup.mission.name}
                       </div>
+
+                      {missionGroup.parts.map((part: any) => (
+                        <div key={part.id} className="px-4 py-2">
+                          {part.description && (
+                            <div className="mb-2">{part.description}</div>
+                          )}
+
+                          {/* Segmented options */}
+                          <div
+                            ref={(el) => {
+                              partRefs.current[part.id] = el;
+                            }}
+                            className={`flex w-full outline rounded overflow-hidden ${part === missionFlow[currentPartIndex].mission_part
+                                ? "outline-4 outline-gray-500"
+                                : "outline-1 outline-gray-600"
+                              }`}
+                          >
+                            <button
+                              className={`flex-none px-2 py-2 text-sm border-r border-gray-600 flex items-center justify-center ${savingParts[part.id] ? "cursor-not-allowed" : ""
+                                } ${selectedOptions[part.id] === null
+                                  ? "bg-gray-600"
+                                  : "bg-gray-800 hover:bg-gray-700"
+                                }`}
+                              onClick={() => handleOptionChange(part.id, null)}
+                            >
+                              ∅
+                            </button>
+
+                            {part.mission_options.map((option: any) => (
+                              <button
+                                key={option.id}
+                                className={`flex-1 px-2 py-2 text-sm border-l border-gray-600 ${savingParts[part.id] ? "cursor-not-allowed" : ""
+                                  } ${selectedOptions[part.id] === option.id
+                                    ? "bg-gray-600"
+                                    : "bg-gray-800 hover:bg-gray-700"
+                                  }`}
+                                onClick={() =>
+                                  handleOptionChange(part.id, option.id)
+                                }
+                              >
+                                {option.description}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>
-              ))}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div >
