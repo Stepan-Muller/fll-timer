@@ -118,7 +118,7 @@ export default function Timer() {
 
     loadPhases();
   }, []);
-  
+
   const missionFlow: MissionFlowItem[] = useMemo(() => {
     return phases.flatMap((phase) =>
       (phase.mission_parts_phases || []).map((item) => ({
@@ -491,6 +491,7 @@ export default function Timer() {
               return `rgb(${r}, ${g}, ${b})`;
             }
 
+            {/* Phase */}
             return (
               <div
                 key={phaseGroup.phase.id}
