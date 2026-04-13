@@ -26,6 +26,7 @@ import { CSS } from "@dnd-kit/utilities";
 
 type Phase = {
   id: number;
+  color: string | null;
   name: string;
   order: number;
   robotgame: number;
@@ -116,33 +117,53 @@ function SortableMissionPart({ part, disableSorting }: { part: MissionPart; disa
   );
 }
 
-function Phase({ phase, updatePhaseName, deletePhase, children }: { phase: Phase; updatePhaseName: (id: number, name: string) => void; deletePhase: (id: number) => void; children: React.ReactNode }) {
-  // Add this hook
-  const { setNodeRef: setDroppableRef } = useDroppable({
-    id: phase.id,
-  });
-
+function Phase({
+  phase,
+  updatePhaseName,
+  updatePhaseColor, // New prop
+  deletePhase,
+  children,
+}: {
+  phase: Phase;
+  updatePhaseName: (id: number, name: string) => void;
+  updatePhaseColor: (id: number, color: string) => void;
+  deletePhase: (id: number) => void;
+  children: React.ReactNode;
+}) {
   const { attributes, listeners, setNodeRef: setSortableRef, transform, transition, isDragging } =
     useSortable({
       id: phase.id,
       data: { type: "phase", phase },
     });
 
+  const { setNodeRef: setDroppableRef } = useDroppable({ id: phase.id });
+
+  // Format the hex for CSS (ensure it has the #)
+  const displayColor = phase.color ? `#${phase.color}` : "transparent";
+
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition,
     opacity: isDragging ? 0.3 : 1,
+    // Apply the chosen color as a left border
+    borderLeft: phase.color ? `4px solid ${displayColor}` : '4px solid transparent',
   };
 
-  // Combine refs: setSortableRef for the outer div, setDroppableRef for the content area
   return (
     <div
       ref={setSortableRef}
       style={style}
-      className="bg-gray-800 mt-6 font-bold rounded-lg outline outline-1 outline-gray-700 overflow-hidden"
+      className="bg-gray-800 mt-6 font-bold rounded-lg outline outline-1 outline-gray-700 overflow-hidden transition-all"
     >
-      <div className="flex items-center w-full bg-gray-750 border-b border-gray-700">
-        <div {...attributes} {...listeners} className="px-4 py-3 text-gray-400 cursor-grab">
+      <div 
+        className="flex items-center w-full bg-gray-750 border-b border-gray-700 pr-2"
+        style={{ backgroundColor: phase.color ? `${displayColor}15` : '' }} // Subtle 15% opacity tint
+      >
+        <div
+          {...attributes}
+          {...listeners}
+          className="px-4 py-3 text-gray-400 cursor-grab hover:text-white"
+        >
           ☰
         </div>
         <input
@@ -151,12 +172,34 @@ function Phase({ phase, updatePhaseName, deletePhase, children }: { phase: Phase
           onChange={(e) => updatePhaseName(phase.id, e.target.value)}
           className="flex-1 px-2 py-2 bg-transparent text-white focus:outline-none font-bold"
         />
-        <button onClick={() => deletePhase(phase.id)} className="px-4 py-2 text-red-500">
+
+        {/* --- Color Picker Section --- */}
+        <div className="relative flex items-center mr-2">
+          <label 
+            htmlFor={`color-${phase.id}`}
+            className="w-6 h-6 rounded-full cursor-pointer border border-gray-500 hover:scale-110 transition-transform shadow-inner"
+            style={{ backgroundColor: displayColor }}
+          >
+            <input
+              id={`color-${phase.id}`}
+              type="color"
+              className="sr-only" // Hidden visually, but active
+              value={displayColor === "transparent" ? "#4B5563" : displayColor}
+              onChange={(e) => updatePhaseColor(phase.id, e.target.value)}
+            />
+          </label>
+        </div>
+
+        <button
+          onClick={() => {
+            if (window.confirm("Delete this phase?")) deletePhase(phase.id);
+          }}
+          className="px-3 py-1 text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
+        >
           Delete
         </button>
       </div>
 
-      {/* Target the internal area as the drop zone */}
       <div ref={setDroppableRef} className="px-4 pb-4 min-h-[80px] bg-gray-850/30">
         {children}
       </div>
@@ -521,6 +564,24 @@ export default function CreateRobotGame() {
     }
   };
 
+  const updatePhaseColor = async (id: number, color: string) => {
+    // Strip the '#' if present for database storage (e.g., #FFFFFF -> FFFFFF)
+    const hexValue = color.startsWith("#") ? color.slice(1) : color;
+
+    // 1. Update local state
+    setPhases((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, color: hexValue } : p))
+    );
+
+    // 2. Persist to Supabase
+    const { error } = await supabase
+      .from("phases")
+      .update({ color: hexValue })
+      .eq("id", id);
+
+    if (error) console.error("Error updating phase color:", error.message);
+  };
+
   const updateRobotGameName = async (name: string) => {
     if (!robotgame) return;
 
@@ -585,7 +646,7 @@ export default function CreateRobotGame() {
           <div className="w-1/2 p-6 bg-gray-900 overflow-y-auto">
             <SortableContext items={phases.map((p) => p.id)} strategy={verticalListSortingStrategy}>
               {phases.map((phase) => (
-                <Phase key={phase.id} phase={phase} updatePhaseName={updatePhaseName} deletePhase={deletePhase}>
+                <Phase key={phase.id} phase={phase} updatePhaseName={updatePhaseName} updatePhaseColor={updatePhaseColor} deletePhase={deletePhase}>
                   <SortableContext
                     id={String(phase.id)} // Add the ID here
                     items={phase.missionParts.map((p) => p.id)}
@@ -614,7 +675,7 @@ export default function CreateRobotGame() {
             {activePart ? <MissionPartItem part={activePart} isOverlay /> : null}
             {activePhase ? (
               <div className="opacity-90 shadow-2xl scale-105">
-                <Phase phase={activePhase} updatePhaseName={() => { }} deletePhase={() => { }}>
+                <Phase phase={activePhase} updatePhaseName={() => { }} updatePhaseColor={() => { }} deletePhase={() => { }}>
                   {activePhase.missionParts.map(p => <MissionPartItem key={p.id} part={p} />)}
                 </Phase>
               </div>
