@@ -192,11 +192,11 @@ function Phase({
 
         <button
           onClick={() => {
-            if (window.confirm("Delete this phase?")) deletePhase(phase.id);
+            deletePhase(phase.id);
           }}
           className="px-3 py-1 text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
         >
-          Delete
+          <i className="uil uil-trash-alt"></i>
         </button>
       </div>
 

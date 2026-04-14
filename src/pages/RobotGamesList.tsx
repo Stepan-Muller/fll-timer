@@ -116,7 +116,7 @@ export default function RobotGamesList() {
                 onClick={() => navigate("/createrobotgame")}
                 className="underline hover:text-gray-300"
               >
-                Add
+                <i className="uil uil-plus-circle"></i>
               </button>
             </div>
 
@@ -133,7 +133,7 @@ export default function RobotGamesList() {
                   onClick={() => deleteGame(game.id)}
                   className="underline text-red-500 hover:text-red-400"
                 >
-                  Delete
+                  <i className="uil uil-trash-alt"></i>
                 </button>
               </div>
             ))}
