@@ -182,8 +182,6 @@ export default function Timer() {
     }
   }, [missionFlow]);
 
-  // ⛔ everything else stays EXACTLY the same below
-
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === " ") {
@@ -391,6 +389,7 @@ export default function Timer() {
   const currentPhase = phases[currentIndex];
 
   const groupedFlow = missionFlow.reduce((acc: any[], item) => {
+    // 1. Find or create the phase group
     let phaseGroup = acc.find(p => p.phase.id === item.phase.id)
 
     if (!phaseGroup) {
@@ -401,19 +400,19 @@ export default function Timer() {
       acc.push(phaseGroup)
     }
 
-    let missionGroup = phaseGroup.missions.find(
-      (m: any) => m.mission.id === item.mission_part.mission.id
-    )
+    // 2. Check the LAST mission group added to this phase
+    const lastMissionGroup = phaseGroup.missions[phaseGroup.missions.length - 1];
 
-    if (!missionGroup) {
-      missionGroup = {
+    // 3. If the last group belongs to the SAME mission, add the part to it
+    if (lastMissionGroup && lastMissionGroup.mission.id === item.mission_part.mission.id) {
+      lastMissionGroup.parts.push(item.mission_part);
+    } else {
+      // 4. Otherwise, create a NEW mission group (even if one existed earlier)
+      phaseGroup.missions.push({
         mission: item.mission_part.mission,
-        parts: []
-      }
-      phaseGroup.missions.push(missionGroup)
+        parts: [item.mission_part]
+      });
     }
-
-    missionGroup.parts.push(item.mission_part)
 
     return acc
   }, [])
@@ -491,7 +490,7 @@ export default function Timer() {
               return `rgb(${r}, ${g}, ${b})`;
             }
 
-            {/* Phase */}
+            {/* Phase */ }
             return (
               <div
                 key={phaseGroup.phase.id}
