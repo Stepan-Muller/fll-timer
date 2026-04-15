@@ -136,7 +136,7 @@ export default function RunsList() {
             {/* Main Header */}
             <header className="w-full flex px-6 py-4 bg-gray-800 shadow-md sticky top-0 z-20">
                 <div className="text-3xl font-bold w-full flex justify-center">
-                    <button onClick={() => navigate("/robotgameslist")} className="underline hover:text-gray-300">
+                    <button onClick={() => navigate("/robotgameslist")} className="underline hover:text-gray-300 whitespace-nowrap overflow-hidden">
                         {robotGameName}
                     </button>
                 </div>

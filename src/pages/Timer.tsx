@@ -439,7 +439,7 @@ export default function Timer() {
               {/* TOP — Phase */}
               <div className="flex-1 flex items-center justify-center">
                 <div
-                  className="w-full h-full flex items-center justify-center rounded-lg text-2xl font-bold"
+                  className="w-full h-full flex items-center justify-center rounded-lg text-2xl font-bold whitespace-nowrap overflow-hidden"
                   style={{
                     backgroundColor: "#" + (currentPhase.color || "374151"),
                     color: getContrastTextColor("#" + (currentPhase.color || "374151")),
@@ -502,7 +502,7 @@ export default function Timer() {
               >
                 {/* Phase header */}
                 <div
-                  className="px-4 py-2 font-bold"
+                  className="px-4 py-2 font-bold whitespace-nowrap overflow-hidden"
                   style={{
                     backgroundColor: baseColor,
                     color: getContrastTextColor(baseColor),

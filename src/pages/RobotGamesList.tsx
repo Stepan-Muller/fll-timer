@@ -126,7 +126,7 @@ export default function RobotGamesList() {
                 key={game.id}
                 className="mb-4 px-4 py-2 rounded-lg bg-gray-800 flex justify-between items-center"
               >
-                <button className="text-lg font-semibold underline hover:text-gray-300" onClick={() => navigate(`/runslist/${game.id}`)}>
+                <button className="text-lg font-semibold underline hover:text-gray-300 whitespace-nowrap overflow-hidden" onClick={() => navigate(`/runslist/${game.id}`)}>
                   {game.name}
                 </button>
                 <button
