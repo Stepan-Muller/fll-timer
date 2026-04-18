@@ -61,7 +61,7 @@ function DroppableSidebar({ id, children }: { id: string; children: React.ReactN
   return (
     <div
       ref={setNodeRef}
-      className="w-1/2 px-6 py-4 bg-gray-800 overflow-y-auto border-r border-gray-700"
+      className="px-6 py-2 bg-gray-800 overflow-y-auto"
     >
       {children}
     </div>
@@ -79,12 +79,12 @@ function MissionPartItem({ part, isOverlay }: { part: MissionPart; isOverlay?: b
           `M${String(part.mission.display_number).padStart(2, "0")} `}
         {part.mission.name}
       </div>
-      {part.description && <div className="mb-2 text-sm text-gray-300">{part.description}</div>}
+      {part.description && <div className="mb-2 text-gray-300">{part.description}</div>}
       <div className="flex w-full outline rounded overflow-hidden outline-1 outline-gray-600">
         {part.mission_options.map((option) => (
           <div
             key={option.id}
-            className="flex-1 px-2 py-2 text-xs border-l border-gray-600 bg-gray-800 first:border-l-0"
+            className="flex-1 p-2 text-sm border-l border-gray-600 bg-gray-800 first:border-l-0"
           >
             {option.description}
           </div>
@@ -155,14 +155,14 @@ function Phase({
       style={style}
       className="bg-gray-800 mt-6 font-bold rounded-lg outline outline-1 outline-gray-700 overflow-hidden transition-all"
     >
-      <div 
-        className="flex items-center w-full bg-gray-750 border-b border-gray-700 pr-2"
+      <div
+        className="flex items-center w-full bg-gray-750 border-b border-gray-700"
         style={{ backgroundColor: phase.color ? `${displayColor}15` : '' }} // Subtle 15% opacity tint
       >
         <div
           {...attributes}
           {...listeners}
-          className="px-4 py-3 text-gray-400 cursor-grab hover:text-white"
+          className="p-2 text-gray-400 cursor-grab hover:text-white"
         >
           ☰
         </div>
@@ -170,12 +170,12 @@ function Phase({
           type="text"
           value={phase.name}
           onChange={(e) => updatePhaseName(phase.id, e.target.value)}
-          className="flex-1 px-2 py-2 bg-transparent text-white focus:outline-none font-bold"
+          className="flex-1 px-4 py-2 bg-transparent text-white focus:outline-none font-bold"
         />
 
         {/* --- Color Picker Section --- */}
         <div className="relative flex items-center mr-2">
-          <label 
+          <label
             htmlFor={`color-${phase.id}`}
             className="w-6 h-6 rounded-full cursor-pointer border border-gray-500 hover:scale-110 transition-transform shadow-inner"
             style={{ backgroundColor: displayColor }}
@@ -604,16 +604,18 @@ export default function CreateRobotGame() {
 
   return (
     <div className="h-screen w-screen bg-gray-900 text-white font-sans flex flex-col overflow-hidden">
-      <header className="w-full flex justify-between bg-gray-800 shadow-md p-4 border-b border-gray-700">
-        <button onClick={() => navigate(`/robotgameslist`)} className="text-xl font-bold hover:text-blue-400 transition-colors">
-          HobbyRobot FLL scorer
-        </button>
+      <header className="w-full flex justify-between bg-gray-800 shadow-md sticky top-0 text-3xl font-bold">
+        <div className="pl-6 my-4 w-[calc(50%-16px)] text-left">
+          <button onClick={() => navigate(`/robotgameslist`)} className="underline hover:text-gray-300">
+            HobbyRobot FLL scorer
+          </button>
+        </div>
         <input
           type="text"
           placeholder="Untitled Robot Game"
           value={robotgame?.name || ""}
           onChange={(e) => updateRobotGameName(e.target.value)}
-          className="px-4 py-2 text-2xl font-bold w-full bg-gray-800 hover:bg-gray-700 text-right focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg transition-all"
+          className="px-6 py-4 w-[calc(50%+16px)] bg-gray-800 hover:bg-gray-700 text-right"
         />
       </header>
 
@@ -626,24 +628,22 @@ export default function CreateRobotGame() {
           onDragEnd={handleDragEnd}
         >
           {/* LEFT Sidebar */}
-          <DroppableSidebar id="unassigned">
-            <h2 className="text-gray-500 uppercase text-xs font-black tracking-widest mb-4">
-              Mission Inventory
-            </h2>
-            <SortableContext
-              id="unassigned"
-              items={missionParts.map((p) => p.id)}
-              strategy={() => null}
-            >
-              {/* Remove the extra div with min-h-[200px], the wrapper handles it now */}
-              {missionParts.map((part) => (
-                <SortableMissionPart key={part.id} part={part} disableSorting={true} />
-              ))}
-            </SortableContext>
-          </DroppableSidebar>
+          <div className="w-[calc(50%-16px)] overflow-auto">
+            <DroppableSidebar id="unassigned">
+              <SortableContext
+                id="unassigned"
+                items={missionParts.map((p) => p.id)}
+                strategy={() => null}
+              >
+                {missionParts.map((part) => (
+                  <SortableMissionPart key={part.id} part={part} disableSorting={true} />
+                ))}
+              </SortableContext>
+            </DroppableSidebar>
+          </div>
 
           {/* RIGHT Workspace */}
-          <div className="w-1/2 p-6 bg-gray-900 overflow-y-auto">
+          <div className="w-[calc(50%+16px)] p-6 pt-0 bg-gray-900 overflow-y-auto">
             <SortableContext items={phases.map((p) => p.id)} strategy={verticalListSortingStrategy}>
               {phases.map((phase) => (
                 <Phase key={phase.id} phase={phase} updatePhaseName={updatePhaseName} updatePhaseColor={updatePhaseColor} deletePhase={deletePhase}>
@@ -661,9 +661,9 @@ export default function CreateRobotGame() {
             </SortableContext>
             <button
               onClick={addPhase}
-              className="mt-8 w-full p-4 border-2 border-dashed border-gray-700 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-500 font-bold transition-all"
+              className="mt-6 w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold"
             >
-              + Create New Phase
+              Create New Phase
             </button>
           </div>
 

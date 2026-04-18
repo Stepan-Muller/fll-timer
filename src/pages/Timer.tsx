@@ -420,14 +420,14 @@ export default function Timer() {
   return (
     <div className="h-screen w-screen bg-gray-900 text-white font-sans flex flex-col">
       {/* Header */}
-      <header className="w-full flex justify-between px-6 py-4 bg-gray-800 shadow-md sticky top-0 z-10">
-        <div className="text-3xl font-bold w-28">{formatTime(totalTime)}</div>
-        <div className="text-3xl font-bold justify-center flex items-center">
+      <header className="w-full flex justify-between px-6 py-4 bg-gray-800 shadow-md sticky top-0 z-10 text-3xl font-bold">
+        <div className="w-28">{formatTime(totalTime)}</div>
+        <div className="justify-center flex items-center">
           <button onClick={() => navigate(`/runslist/${robotgame}`)} className="underline hover:text-gray-300">HobbyRobot FLL scorer</button>
           &nbsp;
           <div className={`w-6 h-6 border-4 border-t-transparent rounded-full animate-spin ${loading > 0 ? "border-gray-500" : "border-gray-800"}`}></div>
         </div>
-        <div className="text-3xl font-bold w-28 text-right">{totalPoints} pts</div>
+        <div className="w-28 text-right">{totalPoints} pts</div>
       </header>
 
       {/* Main content: left and right halves */}
@@ -547,6 +547,7 @@ export default function Timer() {
                                   : "bg-gray-800 hover:bg-gray-700"
                                 }`}
                               onClick={() => handleOptionChange(part.id, null)}
+                              title="Not completed"
                             >
                               ∅
                             </button>

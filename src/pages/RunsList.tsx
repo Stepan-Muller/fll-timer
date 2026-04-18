@@ -155,7 +155,7 @@ export default function RunsList() {
                     <div className="w-full text-center">Points</div>
                     <div className="w-full text-center">Time</div>
                     <div className="w-full text-right">
-                        <button onClick={() => navigate(`/timer/${robotgame}`)} className="hover:text-gray-300">
+                        <button onClick={() => navigate(`/timer/${robotgame}`)} className="hover:text-gray-300" title="new run">
                             <i className="uil uil-plus-circle"></i>
                         </button>
                     </div>
@@ -168,7 +168,7 @@ export default function RunsList() {
                         <div className="w-full text-center">{run.totalPoints}</div>
                         <div className="w-full text-center">{formatTime(run.totalTime)}</div>
                         <div className="w-full text-right">
-                            <button onClick={() => deleteRun(run.id)} className="text-red-500 hover:text-red-400">
+                            <button onClick={() => deleteRun(run.id)} className="text-red-500 hover:text-red-400" title="delete run">
                                 <i className="uil uil-trash-alt"></i>
                             </button>
                         </div>
